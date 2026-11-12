@@ -1,0 +1,26 @@
+{
+  "en": {
+    "index": "https://lotty520.github.io/stillpin-public-pages/index-en.html",
+    "support": "https://lotty520.github.io/stillpin-public-pages/support-en.html",
+    "privacy-policy": "https://lotty520.github.io/stillpin-public-pages/privacy-policy-en.html",
+    "terms-of-service": "https://lotty520.github.io/stillpin-public-pages/terms-of-service-en.html"
+  },
+  "zh-Hans": {
+    "index": "https://lotty520.github.io/stillpin-public-pages/index-zh-Hans.html",
+    "support": "https://lotty520.github.io/stillpin-public-pages/support-zh-Hans.html",
+    "privacy-policy": "https://lotty520.github.io/stillpin-public-pages/privacy-policy-zh-Hans.html",
+    "terms-of-service": "https://lotty520.github.io/stillpin-public-pages/terms-of-service-zh-Hans.html"
+  },
+  "ja": {
+    "index": "https://lotty520.github.io/stillpin-public-pages/index-ja.html",
+    "support": "https://lotty520.github.io/stillpin-public-pages/support-ja.html",
+    "privacy-policy": "https://lotty520.github.io/stillpin-public-pages/privacy-policy-ja.html",
+    "terms-of-service": "https://lotty520.github.io/stillpin-public-pages/terms-of-service-ja.html"
+  },
+  "es": {
+    "index": "https://lotty520.github.io/stillpin-public-pages/index-es.html",
+    "support": "https://lotty520.github.io/stillpin-public-pages/support-es.html",
+    "privacy-policy": "https://lotty520.github.io/stillpin-public-pages/privacy-policy-es.html",
+    "terms-of-service": "https://lotty520.github.io/stillpin-public-pages/terms-of-service-es.html"
+  }
+}
