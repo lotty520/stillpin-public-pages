@@ -1,0 +1,114 @@
+name: Verify public pages
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/verify-public-pages.yml'
+
+permissions: {}
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check all public pages and local links over HTTPS
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import concurrent.futures
+          import json
+          import time
+          import urllib.request
+          from html.parser import HTMLParser
+          from urllib.parse import urljoin, urlsplit
+          
+          BASE = "https://lotty520.github.io/stillpin-public-pages/"
+          LANGUAGES = ("en", "zh-Hans", "ja", "es")
+          KINDS = ("index", "support", "privacy-policy", "terms-of-service")
+          FILES = ["index.html"] + [f"{kind}-{lang}.html" for lang in LANGUAGES for kind in KINDS]
+          
+          class Page(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.lang = None
+                  self.ids = set()
+                  self.links = []
+                  self.h1 = 0
+                  self.scripts = 0
+                  self.forms = 0
+              def handle_starttag(self, tag, attributes):
+                  attrs = dict(attributes)
+                  if tag == "html":
+                      self.lang = attrs.get("lang")
+                  self.h1 += tag == "h1"
+                  self.scripts += tag == "script"
+                  self.forms += tag == "form"
+                  if "id" in attrs:
+                      self.ids.add(attrs["id"])
+                  for key in ("href", "src"):
+                      if key in attrs:
+                          self.links.append(attrs[key])
+          
+          def get(name):
+              url = urljoin(BASE, name)
+              last = None
+              for attempt in range(3):
+                  try:
+                      request = urllib.request.Request(url, headers={"User-Agent": "Stillpin-Public-Pages-Check/1.0"})
+                      with urllib.request.urlopen(request, timeout=25) as response:
+                          data = response.read()
+                          assert response.status == 200, (url, response.status)
+                          assert response.url == url, (url, response.url)
+                          return name, data
+                  except Exception as error:
+                      last = error
+                      if attempt < 2:
+                          time.sleep(2)
+              raise RuntimeError(f"{url}: {last}")
+          
+          with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+              bodies = dict(pool.map(get, FILES))
+          pages = {}
+          for name, body in bodies.items():
+              document = body.decode("utf-8")
+              page = Page()
+              page.feed(document)
+              expected = next((language for language in LANGUAGES if name.endswith("-" + language + ".html")), "en")
+              assert page.lang == expected, (name, page.lang, expected)
+              assert page.h1 == 1, (name, page.h1)
+              assert page.scripts == 0 and page.forms == 0, name
+              assert "Evyren" not in document, name
+              assert "developer@tjxrkj.com" in document, name
+              assert "<title>Stillpin" in document, name
+              for language in LANGUAGES:
+                  kind = name.rsplit("-", 1)[0] if name != "index.html" else "index"
+                  if name.endswith("-zh-Hans.html"):
+                      kind = name[:-len("-zh-Hans.html")]
+                  assert f'hreflang="{language}"' in document, (name, language)
+              pages[name] = page
+              print(f"PASS HTTP 200 {name} lang={page.lang}")
+          
+          resources = set()
+          references = 0
+          for name, page in pages.items():
+              for href in page.links:
+                  target = urlsplit(urljoin(urljoin(BASE, name), href))
+                  if target.scheme != "https" or target.netloc != "lotty520.github.io":
+                      continue
+                  assert target.path.startswith("/stillpin-public-pages/"), (name, href)
+                  path = target.path[len("/stillpin-public-pages/"):] or "index.html"
+                  if path in pages:
+                      if target.fragment:
+                          assert target.fragment in pages[path].ids, (name, href)
+                  else:
+                      resources.add(path)
+                  references += 1
+          with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+              for name, data in pool.map(get, sorted(resources)):
+                  assert data, name
+                  print(f"PASS HTTP 200 {name} bytes={len(data)}")
+          
+          print(json.dumps({"result": "PASS", "html_pages": len(pages), "assets": len(resources), "same_site_references": references}, sort_keys=True))
+          PY
